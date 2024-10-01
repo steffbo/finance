@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 @RequiredArgsConstructor
-@RequestMapping("/api/bank")
+@RequestMapping("/api/v1/bank")
 public class BankController {
 
   private final BankService bankService;

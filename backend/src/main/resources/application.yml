@@ -1,7 +1,24 @@
 spring:
   application:
     name: finance-backend
+
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+
+  datasource:
+    username: ${db_user}
+    password: ${db_password}
+    url: jdbc:postgresql://172.17.0.1:5432/finance
+
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - vault://
+
+  cloud:
+    vault:
+      scheme: http
+      token: ${VAULT_TOKEN} # from GitHub secrets
+      host: 172.17.0.1 # docker host ip
