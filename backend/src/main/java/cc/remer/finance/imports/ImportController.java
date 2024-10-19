@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import static java.lang.String.valueOf;
+
 @Controller
 @RequestMapping("/api/v1/import")
 @RequiredArgsConstructor
@@ -16,11 +18,11 @@ public class ImportController {
   private final MetaImportService metaImportService;
 
   @PostMapping
-  public ResponseEntity<?> importFile(@RequestParam("file") MultipartFile file) {
+  public ResponseEntity<String> importFile(@RequestParam("file") MultipartFile file) {
     try {
       ImportService importService = metaImportService.getImportService(file);
       int transactions = importService.importFile(file);
-      return ResponseEntity.ok().build();
+      return ResponseEntity.ok(valueOf(transactions));
     } catch (Exception e) {
       return ResponseEntity.badRequest().body("Error " + e.getMessage());
     }

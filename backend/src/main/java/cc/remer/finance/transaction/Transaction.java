@@ -21,23 +21,27 @@ public class Transaction {
 
   @Column(nullable = false)
   private LocalDate bookingDate;
+
   @Column(nullable = false)
   private LocalDate valueDate;
+
   @Column(nullable = false)
-  private String status;
-  @Column(nullable = false)
-  private String payer;
-  @Column(nullable = false)
-  private String payee;
+  @Enumerated(EnumType.STRING)
+  private Status status;
+
   @Column(nullable = false)
   private String description;
+
   @Column(nullable = false)
-  private String transactionType;
-  @Column(nullable = false)
-  private String iban;
+  @Enumerated(EnumType.STRING)
+  private Direction direction;
+
   @Column(nullable = false)
   private BigDecimal amount;
 
+  @Column(nullable = false)
+  private String partner;
+  private String partnerIban;
   private String creditorId;
   private String mandateReference;
   private String customerReference;

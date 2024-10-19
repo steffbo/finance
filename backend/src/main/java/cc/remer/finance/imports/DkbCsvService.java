@@ -3,6 +3,8 @@ package cc.remer.finance.imports;
 import cc.remer.finance.bank.Bank;
 import cc.remer.finance.bank.BankRepository;
 import cc.remer.finance.bank.BankType;
+import cc.remer.finance.transaction.Direction;
+import cc.remer.finance.transaction.Status;
 import cc.remer.finance.transaction.Transaction;
 import cc.remer.finance.transaction.TransactionRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +14,10 @@ import org.apache.commons.csv.CSVRecord;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -26,18 +31,18 @@ import static cc.remer.finance.imports.MetaImportService.CSV_TYPE;
 @RequiredArgsConstructor
 public class DkbCsvService implements ImportService {
 
-  private static final String BOOKING_DATE_COLUMN = "Buchungsdatum";
-  private static final String VALUE_DATE_COLUMN = "Wertstellung";
-  private static final String STATUS_COLUMN = "Status";
-  private static final String SENDER_COLUMN = "Zahlungspflichtige*r";
-  private static final String RECEIVER_COLUMN = "Zahlungsempfänger*in";
-  private static final String DESCRIPTION_COLUMN = "Verwendungszweck";
-  private static final String TRANSACTION_TYPE_COLUMN = "Umsatztyp";
-  private static final String IBAN_COLUMN = "IBAN";
-  private static final String AMOUNT_COLUMN = "Betrag (€)";
-  private static final String CREDITOR_ID_COLUMN = "Gläubiger-ID";
-  private static final String MANDATE_REFERENCE_COLUMN = "Mandatsreferenz";
-  private static final String CUSTOMER_REFERENCE_COLUMN = "Kundenreferenz";
+  private static final int BOOKING_DATE_COLUMN = 0;
+  private static final int VALUE_DATE_COLUMN = 1;
+  private static final int STATUS_COLUMN = 2;
+  private static final int SENDER_COLUMN = 3;
+  private static final int RECEIVER_COLUMN = 4;
+  private static final int DESCRIPTION_COLUMN = 5;
+  private static final int TRANSACTION_TYPE_COLUMN = 6;
+  private static final int IBAN_COLUMN = 7;
+  private static final int AMOUNT_COLUMN = 8;
+  private static final int CREDITOR_ID_COLUMN = 9;
+  private static final int MANDATE_REFERENCE_COLUMN = 10;
+  private static final int CUSTOMER_REFERENCE_COLUMN = 11;
 
   private final BankRepository bankRepository;
   private final TransactionRepository transactionRepository;
@@ -93,10 +98,9 @@ public class DkbCsvService implements ImportService {
     DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yy");
 
     try (Reader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-      CSVParser parser = CSVFormat.DEFAULT
-        .withFirstRecordAsHeader()
-        .withSkipHeaderRecord(true)
-        .parse(reader);
+      CSVParser parser = CSVFormat.DEFAULT.builder()
+        .setSkipHeaderRecord(false)
+        .build().parse(reader);
 
       // Skip the first 5 lines (including the header)
       List<CSVRecord> records = parser.getRecords();
@@ -105,12 +109,12 @@ public class DkbCsvService implements ImportService {
         Transaction transaction = new Transaction();
         transaction.setBookingDate(LocalDate.parse(record.get(BOOKING_DATE_COLUMN), dateFormatter));
         transaction.setValueDate(LocalDate.parse(record.get(VALUE_DATE_COLUMN), dateFormatter));
-        transaction.setStatus(record.get(STATUS_COLUMN));
-        transaction.setPayer(record.get(SENDER_COLUMN));
-        transaction.setPayee(record.get(RECEIVER_COLUMN));
+        transaction.setStatus(getStatus(record.get(STATUS_COLUMN)));
         transaction.setDescription(record.get(DESCRIPTION_COLUMN));
-        transaction.setTransactionType(record.get(TRANSACTION_TYPE_COLUMN));
-        transaction.setIban(record.get(IBAN_COLUMN));
+        Direction direction = getDirection(record.get(TRANSACTION_TYPE_COLUMN));
+        transaction.setDirection(direction);
+        transaction.setPartner(record.get(direction == Direction.IN ? SENDER_COLUMN : RECEIVER_COLUMN));
+        transaction.setPartnerIban(record.get(IBAN_COLUMN));
         transaction.setAmount(new BigDecimal(record.get(AMOUNT_COLUMN).replace(".", "").replace(",", ".")));
         transaction.setCreditorId(record.get(CREDITOR_ID_COLUMN));
         transaction.setMandateReference(record.get(MANDATE_REFERENCE_COLUMN));
@@ -120,5 +124,19 @@ public class DkbCsvService implements ImportService {
     }
 
     return transactions;
+  }
+
+  private Direction getDirection(String direction) {
+    if ("Eingang".equals(direction)) {
+      return Direction.IN;
+    }
+    return Direction.OUT;
+  }
+
+  private Status getStatus(String status) {
+    if ("Gebucht".equals(status)) {
+      return Status.COMPLETE;
+    }
+    return Status.PENDING;
   }
 }

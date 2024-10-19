@@ -47,23 +47,7 @@ class ImportControllerTest extends IntegrationTest {
   }
 
   @Test
-  void importFile() throws IOException {
-    Bank bank = bankRepository.save(bank());
-
-    Resource csvFile = new ClassPathResource("dkb-test.csv");
-
-    given()
-      .auth().basic("user", "password")
-      .contentType(ContentType.MULTIPART)
-      .multiPart("file", csvFile.getFile(), "text/csv")
-      .when()
-      .post("/api/v1/import")
-      .then()
-      .statusCode(200);
-  }
-
-  @Test
-  void importFileCreatesTransactions() throws IOException {
+  void importFileCreatesTransactionsWithRightBank() throws IOException {
     Bank bank = bankRepository.save(bank());
 
     Resource csvFile = new ClassPathResource("dkb-test.csv");
@@ -78,8 +62,29 @@ class ImportControllerTest extends IntegrationTest {
       .statusCode(200)
       .extract().response();
 
-    assertThat(response.getBody().asString()).isEqualTo("6");
-    assertThat(transactionRepository.count()).isEqualTo(6);
+    assertThat(response.getBody().asString()).isEqualTo("5");
+    assertThat(transactionRepository.count()).isEqualTo(5);
+    assertThat(transactionRepository.findAll())
+      .extracting("bank")
+      .containsOnly(bank);
+
+  }
+
+  @Test
+  void importFileWithPdf() throws IOException {
+//    Bank bank = bankRepository.save(bank());
+
+    Resource pdfFile = new ClassPathResource("dkb-test.pdf");
+
+    Response response = given()
+      .auth().basic("user", "password")
+      .contentType(ContentType.MULTIPART)
+      .multiPart("file", pdfFile.getFile(), "application/pdf")
+      .when()
+      .post("/api/v1/import")
+      .then()
+      .statusCode(200)
+      .extract().response();
 
   }
 
